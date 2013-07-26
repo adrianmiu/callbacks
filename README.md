@@ -37,7 +37,8 @@ clbs.fire(arg1, arg2, etc);
 clbs.fireWith(context, arg1, args2, etc);
 
 // IMPORTANT NOTE!
-// the context from the fireWith() call will NOT override the context added to the function, if there is one, but only
+// the context from the fireWith() call will NOT override the context added to the function, 
+// if (!!!) there is one, but only if it wasn't provided
 
 ```
 
