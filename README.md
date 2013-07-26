@@ -7,14 +7,15 @@ Library that implements the functionality of [jQuery Callbacks](http://api.jquer
 
 Only 0.6Kb minified and gzipped.
 
-Can be used for handling
+Can be used for handling:
+
 1. List of callbacks to be executed at once
 2. Events
 3. Pub/Sub
 
 How to use
 ========
-```
+```javascript
 // instanciate your callbacks stack
 var clbs = new Callbacks('unique memory'); // the parameter is a string of flags
 
