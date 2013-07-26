@@ -1,6 +1,8 @@
 (function(root, undefined){
 	"use strict";
 
+	var __hasOwnProperty = Object.prototype.hasOwnProperty;
+
 	// utility function to compare 2 callbacks
 	var __compareCallbacks = function(c1, c2) {
 		if (c1.priority < c2.priority) {
@@ -18,9 +20,15 @@
 	};
 	
 	// function to execute a callback (an object from the callbacks registry)
-	var __executeCallback = function(clbk, data) {
-		context = clbk.context || this;
-		return clkb.call(context, data);
+	/**
+	 * 
+	 * @param clbk		callback object (from the stack)
+	 * @param args		callback parameters
+	 * @param defaultContext context for the execution of the callback
+	 */
+	var __executeCallback = function(clbk, args, defaultContext) {
+		var context = clbk.context || defaultContext || this;
+		return clbk.callback.apply(context, args);
 	};
 	
 	// if a callback throws this exception the rest of the callbacks will not be executed
@@ -67,7 +75,15 @@
 	};
 	// callbacks prototype
 	var CP = Callbacks.prototype;
-	// add a function to the callback list
+
+	/**
+	 * Add a function to the callback list
+	 * 
+	 * @param func 			function to be executed
+	 * @param context		context enfored for the function
+	 * @param priority		order in which the callbacks are added to the stack (lower means they will be executed first)
+	 * @returns self
+	 */
 	CP.add = function(func, context, priority) {
 		priority = priority || this.getCurrentPriority();
 		var entry = {
@@ -79,9 +95,23 @@
 			this._registry.push(entry);
 			__updateCallbacksOrder.call(this);
 		}
+		// if the callbacks stack is to be executed once and it already ran, execute the callback now
+		if (this.hasFlag('once') && __hasOwnProperty.call(this, '_lastResult')) {
+			this._lastResult = __executeCallback(entry, null, this._lastContext);
+			if (this.hasFlag('memory')) {
+				this._results = this._results || [];
+				this._results.push(this._lastResult);
+			}
+		}
 		return this;
 	};
-	// add a function tot he callback list making sure it is executed only once
+
+	/**
+	 * Remove a function from the executution stack
+	 * 
+	 * @param func			function to be removed
+	 * @returns self
+	 */
 	CP.remove = function(func) {
 		var len = this._registry.length, i=len;
 		while (i--) {
@@ -91,22 +121,39 @@
 		}
 		return this;
 	};
-	// removes a function from the callback list
-	CP.fire = function(data) {
-		return this.fireWith(data, null);
+
+	/**
+	 * Executes the currently existing stack
+	 * 
+	 * @params				arguments passed to the callback functions
+	 * @return				the result of the last callback
+	 */
+	CP.fire = function() {
+		var args = [].slice.call(arguments);
+		args.unshift(null);
+		return this.fireWith.apply(this, args);
 	};
-	// trigger the execution of a callback list
-	CP.fireWith = function(data, context) {
-		if (this.hasFlag('once')) {
+	
+	/**
+	 * Executes the currently existing stack withing a certain context
+	 * 
+	 * @param context		context in which the callback functions are executed
+	 * @returns			the result of the last callback
+	 */
+	CP.fireWith = function(context) {
+		var data = [].slice.call(arguments, 1, arguments.length);
+		if (this.hasFlag('once') && __hasOwnProperty.call(this, '_lastResult')) {
 			return this._lastResult;
 		}
-		_results = [];
+		var _results = [];
 		// keep the last called context for 'once' type of callbacks
 		this._lastContext = context;
-		var len = this._registry.length, i=len;
+		var len = this._registry.length, i = len;
 		while (i--) {
 			try {
-				results.push(__executeCallback(this._registry[i], data));
+				// i goes from len to 0 but the callbacks should be executed from zero to len
+				// so we revert the index
+				_results.push(__executeCallback(this._registry[len - i - 1], data, context));
 			} catch (e) {
 				if (e instanceof CallbacksBreakExecutionException) {
 					break;
@@ -120,4 +167,4 @@
 		this._lastResult = _results[_results.length - 1];
 		return this._lastResult;
 	};
-})(window, undefined);
+})(window);
