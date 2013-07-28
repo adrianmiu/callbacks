@@ -63,11 +63,17 @@ test("Namespaced events are executed", function() {
 	evtMan.on('name.subname', function() {
 		return 'A';
 	});
+	evtMan.on('name.subname_a', function() {
+		return 'G';
+	});
+	evtMan.on('name.subname.deepsubname', function() {
+		return 'C';
+	});
 	evtMan.on('name', function() {
 		return 'B';
 	});
-	deepEqual(evtMan.trigger('name.subname').results, ['A'], 'Namespaced event was executed');
-	deepEqual(evtMan.trigger('name').results, ['B', 'A'], 'Non-namespaced event included the sub-events');
+	deepEqual(evtMan.trigger('name.subname.deepsubname').results, ['C'], 'Namespaced event was executed');
+	deepEqual(evtMan.trigger('name').results, ['B', 'A', 'C', 'G'], 'Non-namespaced event included the sub-events');
 });
 
 

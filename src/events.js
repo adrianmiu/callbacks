@@ -1,17 +1,26 @@
 (function(root, undefined){
 	var EventManager, Event;
-	root.Event = Event = function(name) {
+	Event = root.Event = function(name) {
 		this.toString = function() {
 			return name;
 		}
 	}
-	root.EventManager = EventManager = function(options) {
-		var _clbs = {}, _clbsList = [];
-		options = options || {};
+	EventManager = root.EventManager = function(options) {
+		var _clbs = {}, _clbsChildren = {};
+		options = options || {flags: 'unique memory'};
+		var storeChildren = function(name) {
+			var parentName = '';
+			if (name.lastIndexOf('.') !== -1) {
+				parentName = name.substr(0, name.lastIndexOf('.'));
+				_clbsChildren[parentName] = _clbsChildren[parentName] || [];
+				(_clbsChildren[parentName].indexOf(name) !== -1) ||_clbsChildren[parentName].push(name);
+				storeChildren(parentName);
+			}
+		}
 		var getCallbacks = function(name) {
 			if (!_clbs[name]) {
 				_clbs[name] = new Callbacks(options.flags || 'unique memory');
-				_clbsList.push(name);
+				storeChildren(name);
 			}
 			return _clbs[name];
 		}
@@ -34,16 +43,22 @@
 		}
 		this.trigger = function(name, data) {
 			var evt,	// event object
-				name,	// name of the event
 				result,	// result of the callback execution
 				clbs;	// callbacks object
 			evt = name instanceof Event ? name : new Event(name);
 			name = name instanceof Event ? name.toString() : name;
 			clbs = getCallbacks(name);
 			result = clbs.fireWith(this, evt, data);
-			evt.results = evt.results || [];
-			[].push.apply(evt.results, clbs._results);
+			evt.results = clbs._results;
 			evt.lastResult = clbs._lastResult;
+			var childEvents = _clbsChildren[name];
+			if (childEvents && childEvents.length) {
+				for (var i=0, len = childEvents.length; i < len; i++) {
+					var childEvt = this.trigger(childEvents[i]);
+					[].push.apply(evt.results, childEvt.results);
+					evt.lastResult = childEvt.lastResult;
+				}
+			}
 			return evt;
 		}
 	}
